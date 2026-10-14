@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>贴图通道工具箱 · 拆分 / 合并 / 法线图</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <button class="brand" id="btn-home" title="返回首页">
+    <span class="logo">CH</span>
+    <span class="brand-text">
+      <b>贴图通道工具箱</b>
+      <small>通道拆分 · 通道合并 · 法线图生成</small>
+    </span>
+  </button>
+  <nav class="topnav">
+    <button class="btn" data-nav="split">拆分</button>
+    <button class="btn" data-nav="merge">合并</button>
+  </nav>
+</header>
+
+<main id="app">
+
+  <!-- ============ 首页 ============ -->
+  <section class="view active" id="view-home">
+    <div class="home-wrap">
+      <h1>选择要进行的处理</h1>
+      <p class="sub">所有处理都在浏览器本地完成，不上传任何图片。</p>
+      <div class="home-grid">
+        <button class="home-card" data-nav="split">
+          <div class="hc-ico" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><rect x="6" y="6" width="36" height="36" rx="6"/><path d="M24 6v36M6 24h36"/></svg>
+          </div>
+          <h2>拆分</h2>
+          <p>载入一张贴图，分离成 R / G / B / A 四个通道，可单独反相、翻转、导出；也能任选两个通道合成法线贴图。</p>
+          <ul>
+            <li>四个通道独立设置与导出</li>
+            <li>两通道 → 法线图（自由指定落在 R/G/B 的哪两个通道）</li>
+            <li>空出的通道填 0 或 1</li>
+          </ul>
+        </button>
+
+        <button class="home-card" data-nav="merge">
+          <div class="hc-ico" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><rect x="6" y="6" width="16" height="16" rx="3"/><rect x="26" y="6" width="16" height="16" rx="3"/><rect x="6" y="26" width="16" height="16" rx="3"/><rect x="26" y="26" width="16" height="16" rx="3"/></svg>
+          </div>
+          <h2>合并</h2>
+          <p>四个槽位分别对应 R / G / B / A 通道，每个槽位可放入贴图，或用自定义颜色直接填补缺失的通道。</p>
+          <ul>
+            <li>每个槽位独立反相 / 翻转</li>
+            <li>选择从贴图的哪个通道取值（R/G/B/A/亮度）</li>
+            <li>无贴图时用颜色或数值填充</li>
+          </ul>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 拆分 ============ -->
+  <section class="view" id="view-split">
+    <div class="workspace">
+      <div class="col-main">
+
+        <div class="card">
+          <div class="card-head">
+            <h3>源贴图</h3>
+            <span class="muted" data-role="srcInfo">未载入</span>
+          </div>
+          <div class="dropzone" id="split-drop">
+            <input type="file" id="split-file" accept="image/*" hidden />
+            <div class="dz-inner">
+              <strong>点击选择贴图</strong>
+              <span class="muted">或将图片拖到此处（PNG / JPG / TGA 转出的位图等）</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>通道</h3>
+            <div class="seg" id="split-preview-mode">
+              <button class="seg-btn active" data-mode="gray">灰度显示</button>
+              <button class="seg-btn" data-mode="color">彩色显示</button>
+            </div>
+          </div>
+          <div class="ch-grid" id="split-channels"></div>
+          <div class="row-end">
+            <button class="btn-sm" id="split-export-all">导出全部通道</button>
+            <span class="muted">按上方显示方式导出（灰度 / 彩色）</span>
+          </div>
+        </div>
+
+        <div class="card" id="normal-card">
+          <div class="card-head">
+            <h3>合成法线贴图</h3>
+            <span class="muted">任选两个通道填入法线图的 RGB</span>
+          </div>
+          <div class="normal-grid">
+            <div class="nrow">
+              <label>源通道一</label>
+              <select data-role="src1"></select>
+              <span class="arrow">→</span>
+              <label>法线</label>
+              <select data-role="dst1"></select>
+            </div>
+            <div class="nrow">
+              <label>源通道二</label>
+              <select data-role="src2"></select>
+              <span class="arrow">→</span>
+              <label>法线</label>
+              <select data-role="dst2"></select>
+            </div>
+            <div class="nrow">
+              <label>空余通道</label>
+              <div class="seg" data-role="rest">
+                <button class="seg-btn active" data-val="1">填 1 (255)</button>
+                <button class="seg-btn" data-val="0">填 0 (0)</button>
+              </div>
+            </div>
+          </div>
+          <div class="hint">提示：法线图的 A 通道固定为 255。常见组合是 R→R、G→G、空余 B 填 1（OpenGL），若需 DirectX 风格可对 G 通道勾选“垂直翻转”。</div>
+        </div>
+
+      </div>
+
+      <aside class="col-side">
+        <div class="card sticky">
+          <div class="card-head">
+            <h3>预览</h3>
+            <div class="seg" id="split-tab">
+              <button class="seg-btn active" data-tab="channel">通道</button>
+              <button class="seg-btn" data-tab="normal">法线</button>
+            </div>
+          </div>
+          <div class="big-preview checker"><canvas id="split-preview-canvas"></canvas></div>
+          <div class="meta" id="split-meta">载入贴图后显示</div>
+          <div class="export-bar">
+            <select id="split-format">
+              <option value="image/png">PNG</option>
+              <option value="image/jpeg">JPG</option>
+            </select>
+            <button class="btn primary" id="split-export" disabled>导出</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ 合并 ============ -->
+  <section class="view" id="view-merge">
+    <div class="workspace">
+      <div class="col-main">
+        <div class="card">
+          <div class="card-head">
+            <h3>通道槽位</h3>
+            <span class="muted">每个槽位可放贴图，或用颜色 / 数值直接填充</span>
+          </div>
+          <div class="ch-grid" id="merge-channels"></div>
+          <div class="row-end">
+            <button class="btn-sm" id="merge-reset">全部重置</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="col-side">
+        <div class="card sticky">
+          <div class="card-head"><h3>合并预览</h3></div>
+          <div class="big-preview checker"><canvas id="merge-preview-canvas"></canvas></div>
+          <div class="meta" id="merge-meta">—</div>
+          <div class="size-row">
+            <label>输出尺寸</label>
+            <input type="number" id="merge-w" min="1" step="1" />
+            <span>×</span>
+            <input type="number" id="merge-h" min="1" step="1" />
+            <button class="btn-sm" id="merge-size-auto" title="按已载入贴图取最大尺寸">自动</button>
+          </div>
+          <div class="export-bar">
+            <select id="merge-format">
+              <option value="image/png">PNG</option>
+              <option value="image/jpeg">JPG</option>
+            </select>
+            <button class="btn primary" id="merge-export">导出合并贴图</button>
+          </div>
+          <div class="hint">尺寸默认取所有已载入贴图中的最大宽高；未载入任何贴图时为 512 × 512。</div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="js/core.js"></script>
+<script src="js/split.js"></script>
+<script src="js/merge.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
